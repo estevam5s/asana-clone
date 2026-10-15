@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asana Clone</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <!-- ── Title Bar (macOS-style hidden inset) ── -->
+  <div id="titlebar">
+    <div id="titlebar-drag"></div>
+    <div id="tab-bar">
+      <div id="tabs-container"></div>
+      <button id="new-tab-btn" title="New Tab">+</button>
+    </div>
+    <div id="titlebar-actions">
+      <button id="btn-minimize" title="Minimize">&#x2013;</button>
+      <button id="btn-maximize" title="Maximize">&#x25A1;</button>
+      <button id="btn-close" title="Close">&#x2715;</button>
+    </div>
+  </div>
+
+  <!-- ── Top Navigation Bar ── -->
+  <div id="topbar">
+    <div id="topbar-left">
+      <button id="sidebar-toggle" class="topbar-btn" title="Toggle Sidebar">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14v1.5H3zm0 5h14v1.5H3zm0 5h14v1.5H3z"/></svg>
+      </button>
+      <div id="breadcrumb"></div>
+    </div>
+    <div id="topbar-center">
+      <div id="search-bar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.7 10.3a6 6 0 10-1.4 1.4l4 4a1 1 0 001.4-1.4l-4-4zm-5.2.7a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/></svg>
+        <input type="text" id="global-search" placeholder="Search" autocomplete="off">
+      </div>
+    </div>
+    <div id="topbar-right">
+      <button id="btn-create" class="topbar-btn create-btn">+ Create</button>
+      <button id="btn-notifications" class="topbar-btn" title="Notifications">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a2 2 0 01-2-2h4a2 2 0 01-2 2zm6-4v-4a6 6 0 00-5-5.9V3a1 1 0 10-2 0v1.1A6 6 0 004 10v4l-2 2v1h16v-1l-2-2z"/></svg>
+        <span id="notification-badge" class="badge hidden">0</span>
+      </button>
+      <button id="btn-help" class="topbar-btn" title="Help">?</button>
+      <div id="user-avatar" title="My Settings">
+        <span id="user-initials">U</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main Layout ── -->
+  <div id="app-container">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div id="sidebar-header">
+        <div id="workspace-selector">
+          <div id="workspace-icon">A</div>
+          <span id="workspace-name">My Workspace</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>
+        </div>
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+          <a class="nav-item active" data-view="home"><span class="nav-icon">&#x1F3E0;</span> Home</a>
+          <a class="nav-item" data-view="my-tasks"><span class="nav-icon">&#x2713;</span> My Tasks</a>
+          <a class="nav-item" data-view="inbox"><span class="nav-icon">&#x1F4E5;</span> Inbox <span class="nav-badge hidden" id="inbox-badge">0</span></a>
+          <a class="nav-item" data-view="reporting"><span class="nav-icon">&#x1F4CA;</span> Reporting</a>
+          <a class="nav-item" data-view="portfolios"><span class="nav-icon">&#x1F4C1;</span> Portfolios</a>
+          <a class="nav-item" data-view="goals"><span class="nav-icon">&#x1F3AF;</span> Goals</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-header">
+            <span>Insights</span>
+          </div>
+          <a class="nav-item" data-view="status-updates"><span class="nav-icon">&#x1F4DD;</span> Status Updates</a>
+        </div>
+        <div class="nav-section" id="starred-section">
+          <div class="nav-section-header">
+            <span>Starred</span>
+            <button class="section-toggle" data-section="starred">&#x25BE;</button>
+          </div>
+          <div class="nav-section-items" id="starred-items"></div>
+        </div>
+        <div class="nav-section" id="projects-section">
+          <div class="nav-section-header">
+            <span>Projects</span>
+            <button class="section-toggle" data-section="projects">&#x25BE;</button>
+            <button class="section-add" id="add-project-sidebar" title="Create Project">+</button>
+          </div>
+          <div class="nav-section-items" id="project-items"></div>
+        </div>
+        <div class="nav-section" id="teams-section">
+          <div class="nav-section-header">
+            <span>Teams</span>
+            <button class="section-toggle" data-section="teams">&#x25BE;</button>
+          </div>
+          <div class="nav-section-items" id="team-items"></div>
+        </div>
+      </div>
+      <div id="sidebar-footer">
+        <button id="invite-btn" class="sidebar-action">Invite Teammates</button>
+        <button id="help-btn" class="sidebar-action">Help & Getting Started</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+      <!-- Home View -->
+      <div id="view-home" class="view active">
+        <div class="view-header">
+          <h1>Home</h1>
+          <button class="customize-btn">Customize</button>
+        </div>
+        <div class="home-grid">
+          <div class="home-widget" id="widget-my-tasks">
+            <div class="widget-header">
+              <h3>My Tasks</h3>
+              <a class="widget-link" data-view="my-tasks">View all</a>
+            </div>
+            <div class="widget-body" id="home-tasks-list"></div>
+          </div>
+          <div class="home-widget" id="widget-projects">
+            <div class="widget-header">
+              <h3>Projects</h3>
+              <a class="widget-link" data-view="projects-list">View all</a>
+            </div>
+            <div class="widget-body" id="home-projects-list"></div>
+          </div>
+          <div class="home-widget" id="widget-people">
+            <div class="widget-header">
+              <h3>People</h3>
+            </div>
+            <div class="widget-body" id="home-people-list"></div>
+          </div>
+          <div class="home-widget" id="widget-notepad">
+            <div class="widget-header">
+              <h3>Private Notepad</h3>
+            </div>
+            <div class="widget-body">
+              <textarea id="private-notepad" placeholder="Type here to jot down notes..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Tasks View -->
+      <div id="view-my-tasks" class="view">
+        <div class="view-header">
+          <h1>My Tasks</h1>
+          <div class="view-tabs">
+            <button class="view-tab active" data-tab="list">List</button>
+            <button class="view-tab" data-tab="board">Board</button>
+            <button class="view-tab" data-tab="calendar">Calendar</button>
+            <button class="view-tab" data-tab="files">Files</button>
+          </div>
+          <div class="view-actions">
+            <button class="filter-btn">Filter</button>
+            <button class="sort-btn">Sort</button>
+            <button class="group-btn">Group by</button>
+          </div>
+        </div>
+        <div class="task-sections" id="my-tasks-sections">
+          <div class="task-section" data-section="recently-assigned">
+            <div class="section-header">
+              <button class="section-collapse">&#x25BE;</button>
+              <span class="section-name" contenteditable="true">Recently Assigned</span>
+              <button class="section-add-task">+ Add task</button>
+            </div>
+            <div class="task-list" id="recently-assigned-tasks"></div>
+          </div>
+          <div class="task-section" data-section="today">
+            <div class="section-header">
+              <button class="section-collapse">&#x25BE;</button>
+              <span class="section-name" contenteditable="true">Today</span>
+              <button class="section-add-task">+ Add task</button>
+            </div>
+            <div class="task-list" id="today-tasks"></div>
+          </div>
+          <div class="task-section" data-section="upcoming">
+            <div class="section-header">
+              <button class="section-collapse">&#x25BE;</button>
+              <span class="section-name" contenteditable="true">Upcoming</span>
+              <button class="section-add-task">+ Add task</button>
+            </div>
+            <div class="task-list" id="upcoming-tasks"></div>
+          </div>
+          <div class="task-section" data-section="later">
+            <div class="section-header">
+              <button class="section-collapse">&#x25BE;</button>
+              <span class="section-name" contenteditable="true">Later</span>
+              <button class="section-add-task">+ Add task</button>
+            </div>
+            <div class="task-list" id="later-tasks"></div>
+          </div>
+        </div>
+        <button class="add-section-btn" id="add-section-my-tasks">+ Add section</button>
+        <!-- Board view -->
+        <div id="board-view" class="board-view hidden">
+          <div class="board-columns" id="board-columns"></div>
+        </div>
+        <!-- Calendar view -->
+        <div id="calendar-view" class="calendar-view hidden"></div>
+      </div>
+
+      <!-- Inbox View -->
+      <div id="view-inbox" class="view">
+        <div class="view-header">
+          <h1>Inbox</h1>
+          <div class="view-actions">
+            <button id="inbox-archive-all">Archive all</button>
+            <select id="inbox-filter">
+              <option value="all">All</option>
+              <option value="unread">Unread</option>
+              <option value="mentions">@ Mentions</option>
+              <option value="tasks">Tasks assigned</option>
+            </select>
+          </div>
+        </div>
+        <div id="inbox-list" class="inbox-list"></div>
+        <div id="inbox-empty" class="empty-state">
+          <p>You've seen everything!</p>
+          <p class="empty-subtitle">When there's something new, it'll show up here.</p>
+        </div>
+      </div>
+
+      <!-- Project View -->
+      <div id="view-project" class="view">
+        <div class="view-header" id="project-header">
+          <div class="project-title-row">
+            <div class="project-icon" id="project-icon"></div>
+            <h1 id="project-name" contenteditable="true">Project</h1>
+            <button id="project-star" class="star-btn" title="Star project">&#x2606;</button>
+          </div>
+          <div class="view-tabs">
+            <button class="view-tab active" data-tab="list">Overview</button>
+            <button class="view-tab" data-tab="list">List</button>
+            <button class="view-tab" data-tab="board">Board</button>
+            <button class="view-tab" data-tab="timeline">Timeline</button>
+            <button class="view-tab" data-tab="calendar">Calendar</button>
+            <button class="view-tab" data-tab="workflow">Workflow</button>
+            <button class="view-tab" data-tab="dashboard">Dashboard</button>
+            <button class="view-tab" data-tab="messages">Messages</button>
+            <button class="view-tab" data-tab="files">Files</button>
+          </div>
+          <div class="view-actions">
+            <button class="filter-btn">Filter</button>
+            <button class="sort-btn">Sort</button>
+            <button class="group-btn">Group by</button>
+            <button class="share-btn" id="share-project">Share</button>
+          </div>
+        </div>
+        <div class="task-sections" id="project-tasks-sections"></div>
+        <button class="add-section-btn" id="add-section-project">+ Add section</button>
+      </div>
+
+      <!-- Reporting View -->
+      <div id="view-reporting" class="view">
+        <div class="view-header">
+          <h1>Reporting</h1>
+          <button class="create-btn">+ New Dashboard</button>
+        </div>
+        <div class="reporting-grid" id="reporting-dashboards">
+          <div class="reporting-card">
+            <h3>Tasks completed</h3>
+            <div class="chart-placeholder" id="chart-completed"></div>
+          </div>
+          <div class="reporting-card">
+            <h3>Tasks by status</h3>
+            <div class="chart-placeholder" id="chart-status"></div>
+          </div>
+          <div class="reporting-card">
+            <h3>Upcoming deadlines</h3>
+            <div class="chart-placeholder" id="chart-deadlines"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolios View -->
+      <div id="view-portfolios" class="view">
+        <div class="view-header">
+          <h1>Portfolios</h1>
+          <button class="create-btn" id="create-portfolio">+ New Portfolio</button>
+        </div>
+        <div class="portfolio-list" id="portfolio-list"></div>
+      </div>
+
+      <!-- Goals View -->
+      <div id="view-goals" class="view">
+        <div class="view-header">
+          <h1>Goals</h1>
+          <div class="view-tabs">
+            <button class="view-tab active" data-tab="my-goals">My Goals</button>
+            <button class="view-tab" data-tab="team-goals">Team Goals</button>
+            <button class="view-tab" data-tab="company-goals">Company Goals</button>
+          </div>
+          <button class="create-btn" id="create-goal">+ Add Goal</button>
+        </div>
+        <div class="goals-list" id="goals-list"></div>
+      </div>
+
+      <!-- Status Updates View -->
+      <div id="view-status-updates" class="view">
+        <div class="view-header">
+          <h1>Status Updates</h1>
+        </div>
+        <div id="status-updates-list" class="status-list"></div>
+      </div>
+    </main>
+
+    <!-- Task Detail Panel (slide-in) -->
+    <aside id="task-detail-panel" class="hidden">
+      <div id="task-detail-header">
+        <div class="task-detail-actions">
+          <button id="task-mark-complete" class="complete-btn" title="Mark complete">&#x2713;</button>
+          <button id="task-like" title="Like">&#x1F44D;</button>
+          <button id="task-attach" title="Attach">&#x1F4CE;</button>
+          <button id="task-subtask" title="Add subtask">&#x1F4CB;</button>
+          <button id="task-copy-link" title="Copy link">&#x1F517;</button>
+          <button id="task-more" title="More actions">&#x22EF;</button>
+          <button id="task-fullscreen" title="Full screen">&#x26F6;</button>
+          <button id="task-close" title="Close">&#x2715;</button>
+        </div>
+      </div>
+      <div id="task-detail-body">
+        <h2 id="task-detail-name" contenteditable="true"></h2>
+        <div class="task-fields">
+          <div class="task-field">
+            <label>Assignee</label>
+            <div id="task-assignee" class="field-value clickable">Unassigned</div>
+          </div>
+          <div class="task-field">
+            <label>Due date</label>
+            <input type="date" id="task-due-date" class="field-value">
+          </div>
+          <div class="task-field">
+            <label>Projects</label>
+            <div id="task-projects" class="field-value clickable">None</div>
+          </div>
+          <div class="task-field">
+            <label>Priority</label>
+            <select id="task-priority" class="field-value">
+              <option value="">None</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="task-field">
+            <label>Tags</label>
+            <div id="task-tags" class="field-value clickable">Add tags</div>
+          </div>
+          <div class="task-field">
+            <label>Dependencies</label>
+            <div id="task-dependencies" class="field-value clickable">Add dependencies</div>
+          </div>
+        </div>
+        <div id="task-description-section">
+          <div id="task-description" contenteditable="true" data-placeholder="Add a description..."></div>
+        </div>
+        <div id="task-subtasks-section">
+          <h4>Subtasks</h4>
+          <div id="task-subtasks-list"></div>
+          <button id="add-subtask-btn" class="inline-add">+ Add subtask</button>
+        </div>
+        <div id="task-comments-section">
+          <h4>Activity</h4>
+          <div id="task-activity-list"></div>
+          <div id="task-comment-input">
+            <div id="comment-editor" contenteditable="true" data-placeholder="Write a comment..."></div>
+            <div class="comment-toolbar">
+              <button class="comment-tool" title="Formatting">B</button>
+              <button class="comment-tool" title="Emoji">&#x1F600;</button>
+              <button class="comment-tool" title="Mention">@</button>
+              <button class="comment-tool" title="Attach">&#x1F4CE;</button>
+              <button id="send-comment" class="send-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ── Create Task Modal ── -->
+  <div id="create-task-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content create-task-content">
+      <div class="modal-header">
+        <h2>New Task</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="new-task-name" placeholder="Task name" autofocus>
+        <div id="new-task-description" contenteditable="true" data-placeholder="Description"></div>
+        <div class="modal-fields">
+          <div class="modal-field">
+            <label>Assignee</label>
+            <select id="new-task-assignee"><option value="">Unassigned</option></select>
+          </div>
+          <div class="modal-field">
+            <label>Due date</label>
+            <input type="date" id="new-task-due">
+          </div>
+          <div class="modal-field">
+            <label>Project</label>
+            <select id="new-task-project"><option value="">None</option></select>
+          </div>
+          <div class="modal-field">
+            <label>Section</label>
+            <select id="new-task-section"><option value="">Default</option></select>
+          </div>
+          <div class="modal-field">
+            <label>Priority</label>
+            <select id="new-task-priority">
+              <option value="">None</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="create-task-submit">Create Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Create Project Modal ── -->
+  <div id="create-project-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>New Project</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="new-project-name" placeholder="Project name">
+        <div class="modal-fields">
+          <div class="modal-field">
+            <label>Color</label>
+            <div id="color-picker" class="color-picker">
+              <span class="color-swatch" data-color="#e8384f" style="background:#e8384f"></span>
+              <span class="color-swatch" data-color="#fd612c" style="background:#fd612c"></span>
+              <span class="color-swatch" data-color="#fd9a00" style="background:#fd9a00"></span>
+              <span class="color-swatch" data-color="#eec300" style="background:#eec300"></span>
+              <span class="color-swatch" data-color="#a4cf30" style="background:#a4cf30"></span>
+              <span class="color-swatch" data-color="#62d26f" style="background:#62d26f"></span>
+              <span class="color-swatch" data-color="#37c5ab" style="background:#37c5ab"></span>
+              <span class="color-swatch" data-color="#20aaea" style="background:#20aaea"></span>
+              <span class="color-swatch" data-color="#4186e0" style="background:#4186e0"></span>
+              <span class="color-swatch" data-color="#7a6ff0" style="background:#7a6ff0"></span>
+              <span class="color-swatch" data-color="#aa62e3" style="background:#aa62e3"></span>
+              <span class="color-swatch" data-color="#e362e3" style="background:#e362e3"></span>
+              <span class="color-swatch" data-color="#ea4e9d" style="background:#ea4e9d"></span>
+              <span class="color-swatch" data-color="#fc91ad" style="background:#fc91ad"></span>
+              <span class="color-swatch" data-color="#8da3a6" style="background:#8da3a6"></span>
+              <span class="color-swatch selected" data-color="#6d6e6f" style="background:#6d6e6f"></span>
+            </div>
+          </div>
+          <div class="modal-field">
+            <label>Default view</label>
+            <select id="new-project-view">
+              <option value="list">List</option>
+              <option value="board">Board</option>
+              <option value="timeline">Timeline</option>
+              <option value="calendar">Calendar</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Privacy</label>
+            <select id="new-project-privacy">
+              <option value="public">Public to team</option>
+              <option value="private">Private to members</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="create-project-submit">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Share Modal ── -->
+  <div id="share-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Share</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="share-input-row">
+          <input type="text" id="share-email" placeholder="Add members by name or email">
+          <button id="share-invite-btn" class="btn-primary">Invite</button>
+        </div>
+        <div id="share-members-list" class="members-list"></div>
+        <div class="share-link-row">
+          <span>Project link</span>
+          <button id="copy-project-link" class="btn-secondary">Copy link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Keyboard Shortcuts Modal ── -->
+  <div id="shortcuts-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content shortcuts-content">
+      <div class="modal-header">
+        <h2>Keyboard Shortcuts</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body shortcuts-grid">
+        <div class="shortcut-group">
+          <h4>Tasks</h4>
+          <div class="shortcut-row"><kbd>Tab+N</kbd><span>Create new task</span></div>
+          <div class="shortcut-row"><kbd>Tab+Enter</kbd><span>Open task detail</span></div>
+          <div class="shortcut-row"><kbd>Tab+D</kbd><span>Set due date</span></div>
+          <div class="shortcut-row"><kbd>Tab+A</kbd><span>Assign task</span></div>
+          <div class="shortcut-row"><kbd>Tab+M</kbd><span>Add to project</span></div>
+          <div class="shortcut-row"><kbd>Tab+C</kbd><span>Comment on task</span></div>
+          <div class="shortcut-row"><kbd>Tab+S</kbd><span>Add subtask</span></div>
+          <div class="shortcut-row"><kbd>Tab+L</kbd><span>Like task</span></div>
+          <div class="shortcut-row"><kbd>Enter</kbd><span>Mark complete</span></div>
+          <div class="shortcut-row"><kbd>Backspace</kbd><span>Delete task</span></div>
+        </div>
+        <div class="shortcut-group">
+          <h4>Navigation</h4>
+          <div class="shortcut-row"><kbd>Tab+H</kbd><span>Home</span></div>
+          <div class="shortcut-row"><kbd>Tab+Z</kbd><span>My Tasks</span></div>
+          <div class="shortcut-row"><kbd>Tab+I</kbd><span>Inbox</span></div>
+          <div class="shortcut-row"><kbd>/</kbd><span>Search</span></div>
+          <div class="shortcut-row"><kbd>Tab+B</kbd><span>Quick add task</span></div>
+        </div>
+        <div class="shortcut-group">
+          <h4>Views</h4>
+          <div class="shortcut-row"><kbd>Tab+V</kbd><span>Switch views</span></div>
+          <div class="shortcut-row"><kbd>Tab+F</kbd><span>Filter</span></div>
+          <div class="shortcut-row"><kbd>Tab+X</kbd><span>Expand sidebar</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings Modal ── -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content settings-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body settings-body">
+        <div class="settings-sidebar">
+          <a class="settings-nav active" data-settings="profile">My Profile</a>
+          <a class="settings-nav" data-settings="account">Account</a>
+          <a class="settings-nav" data-settings="display">Display</a>
+          <a class="settings-nav" data-settings="notifications">Notifications</a>
+          <a class="settings-nav" data-settings="apps">Apps</a>
+          <a class="settings-nav" data-settings="hacks">Hacks</a>
+        </div>
+        <div class="settings-panels">
+          <div class="settings-panel active" id="settings-profile">
+            <h3>My Profile Settings</h3>
+            <div class="settings-field">
+              <label>Your photo</label>
+              <div class="avatar-upload">
+                <div class="avatar-preview" id="settings-avatar">U</div>
+                <button class="btn-secondary">Upload photo</button>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Name</label>
+              <input type="text" id="settings-name" value="User">
+            </div>
+            <div class="settings-field">
+              <label>Email</label>
+              <input type="email" id="settings-email" value="user@example.com">
+            </div>
+            <div class="settings-field">
+              <label>Job title</label>
+              <input type="text" id="settings-job-title" placeholder="Add a job title">
+            </div>
+            <div class="settings-field">
+              <label>Department</label>
+              <input type="text" id="settings-department" placeholder="Add a department">
+            </div>
+            <div class="settings-field">
+              <label>About me</label>
+              <textarea id="settings-about" placeholder="Tell us about yourself"></textarea>
+            </div>
+          </div>
+          <div class="settings-panel" id="settings-account">
+            <h3>Account Settings</h3>
+            <div class="settings-field">
+              <label>Language</label>
+              <select id="settings-language">
+                <option value="en">English</option>
+                <option value="pt-br">Portugu&#xEA;s (Brasil)</option>
+                <option value="es">Espa&#xF1;ol</option>
+                <option value="fr">Fran&#xE7;ais</option>
+                <option value="de">Deutsch</option>
+                <option value="ja">&#x65E5;&#x672C;&#x8A9E;</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label>Two-factor authentication</label>
+              <button class="btn-secondary">Enable 2FA</button>
+            </div>
+            <div class="settings-field danger-zone">
+              <label>Deactivate account</label>
+              <button class="btn-danger">Deactivate my account</button>
+            </div>
+          </div>
+          <div class="settings-panel" id="settings-display">
+            <h3>Display Settings</h3>
+            <div class="settings-field">
+              <label>Theme</label>
+              <div class="theme-options">
+                <label class="theme-option"><input type="radio" name="theme" value="light" checked> Light</label>
+                <label class="theme-option"><input type="radio" name="theme" value="dark"> Dark</label>
+                <label class="theme-option"><input type="radio" name="theme" value="system"> System</label>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Sidebar color</label>
+              <div id="sidebar-color-picker" class="color-picker">
+                <span class="color-swatch selected" data-color="#1e1f21" style="background:#1e1f21"></span>
+                <span class="color-swatch" data-color="#151b26" style="background:#151b26"></span>
+                <span class="color-swatch" data-color="#1a1721" style="background:#1a1721"></span>
+                <span class="color-swatch" data-color="#162015" style="background:#162015"></span>
+                <span class="color-swatch" data-color="#2a1f14" style="background:#2a1f14"></span>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Topbar color</label>
+              <div id="topbar-color-picker" class="color-picker">
+                <span class="color-swatch" data-color="#f06a6a" style="background:#f06a6a"></span>
+                <span class="color-swatch selected" data-color="#4186e0" style="background:#4186e0"></span>
+                <span class="color-swatch" data-color="#7a6ff0" style="background:#7a6ff0"></span>
+                <span class="color-swatch" data-color="#37c5ab" style="background:#37c5ab"></span>
+                <span class="color-swatch" data-color="#62d26f" style="background:#62d26f"></span>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Compact mode</label>
+              <label class="toggle"><input type="checkbox" id="compact-mode"> <span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-field">
+              <label>Show task row numbers</label>
+              <label class="toggle"><input type="checkbox" id="show-row-numbers"> <span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-field">
+              <label>Color blind friendly mode</label>
+              <label class="toggle"><input type="checkbox" id="colorblind-mode"> <span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="settings-panel" id="settings-notifications">
+            <h3>Notification Settings</h3>
+            <div class="settings-field">
+              <label>Desktop notifications</label>
+              <label class="toggle"><input type="checkbox" id="desktop-notifications" checked> <span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-field">
+              <label>Email notifications</label>
+              <select id="email-notification-freq">
+                <option value="instant">Instant</option>
+                <option value="daily">Daily summary</option>
+                <option value="weekly">Weekly summary</option>
+                <option value="never">Never</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label>Do not disturb</label>
+              <label class="toggle"><input type="checkbox" id="dnd-toggle"> <span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="settings-panel" id="settings-apps">
+            <h3>Apps &amp; Integrations</h3>
+            <div class="integrations-list">
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#4285F4">G</div>
+                <div class="integration-info"><strong>Google Drive</strong><br>Attach files from Google Drive</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#0078D4">M</div>
+                <div class="integration-info"><strong>Microsoft Teams</strong><br>Get Asana updates in Teams</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#E01E5A">S</div>
+                <div class="integration-info"><strong>Slack</strong><br>Create tasks from Slack messages</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#24292F">GH</div>
+                <div class="integration-info"><strong>GitHub</strong><br>Link PRs and commits to tasks</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#FF5630">J</div>
+                <div class="integration-info"><strong>Jira</strong><br>Sync tasks with Jira issues</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+              <div class="integration-card">
+                <div class="integration-icon" style="background:#7B68EE">F</div>
+                <div class="integration-info"><strong>Figma</strong><br>Embed Figma files in tasks</div>
+                <button class="btn-secondary">Connect</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-panel" id="settings-hacks">
+            <h3>Hacks</h3>
+            <p class="settings-description">Experimental features that may change or be removed.</p>
+            <div class="settings-field">
+              <label>Extra delight</label>
+              <label class="toggle"><input type="checkbox" id="hack-delight"> <span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-field">
+              <label>Disable celebrations</label>
+              <label class="toggle"><input type="checkbox" id="hack-no-celebrations"> <span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast Notification ── -->
+  <div id="toast-container"></div>
+
+  <!-- ── Celebration Animation ── -->
+  <canvas id="celebration-canvas" class="hidden"></canvas>
+
+  <script src="app.js"></script>
+</body>
+</html>

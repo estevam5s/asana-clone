@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asana Clone - Tray</title>
+  <style>
+    :root {
+      --bg: #1e1f21; --text: #f5f4f3; --text-dim: #a2a0a2;
+      --border: #424244; --accent: #4573d2; --hover: #2e2f31;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; background: var(--bg); color: var(--text); overflow: hidden; }
+    .header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .header h3 { font-size: 14px; font-weight: 600; }
+    .timer-section { padding: 16px; text-align: center; border-bottom: 1px solid var(--border); }
+    .timer-display { font-size: 48px; font-weight: 300; letter-spacing: 2px; margin: 12px 0; }
+    .timer-controls { display: flex; gap: 8px; justify-content: center; }
+    .timer-btn { padding: 6px 16px; border-radius: 4px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; font-size: 12px; }
+    .timer-btn:hover { background: var(--hover); }
+    .timer-btn.primary { background: var(--accent); border-color: var(--accent); }
+    .timer-btn.primary:hover { opacity: .9; }
+    .tasks-section { padding: 8px 0; max-height: 240px; overflow-y: auto; }
+    .tasks-header { padding: 4px 16px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; }
+    .task-item { padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .task-item:hover { background: var(--hover); }
+    .task-check { width: 14px; height: 14px; border: 2px solid var(--text-dim); border-radius: 50%; flex-shrink: 0; }
+    .task-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-due { font-size: 11px; color: var(--text-dim); }
+    .footer { padding: 8px 16px; border-top: 1px solid var(--border); }
+    .footer a { color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h3>Asana Clone</h3>
+    <span style="font-size:11px;color:var(--text-dim)" id="date"></span>
+  </div>
+  <div class="timer-section">
+    <div style="font-size:12px;color:var(--text-dim)">Focus Timer</div>
+    <div class="timer-display" id="timer">25:00</div>
+    <div class="timer-controls">
+      <button class="timer-btn primary" id="timer-start">Start</button>
+      <button class="timer-btn" id="timer-reset">Reset</button>
+    </div>
+  </div>
+  <div class="tasks-section">
+    <div class="tasks-header">Today's Tasks</div>
+    <div id="tray-tasks"></div>
+  </div>
+  <div class="footer">
+    <a id="open-app">Open Asana Clone</a>
+  </div>
+  <script>
+    const d = new Date();
+    document.getElementById('date').textContent = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+    let seconds = 25 * 60, running = false, interval;
+    const display = document.getElementById('timer');
+    const update = () => { const m = Math.floor(seconds / 60); const s = seconds % 60; display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
+
+    document.getElementById('timer-start').onclick = function () {
+      if (running) { clearInterval(interval); running = false; this.textContent = 'Start'; return; }
+      running = true; this.textContent = 'Pause';
+      interval = setInterval(() => {
+        if (seconds <= 0) { clearInterval(interval); running = false; document.getElementById('timer-start').textContent = 'Start'; window.electronInjectedApi?.playTimerSound(); return; }
+        seconds--; update();
+      }, 1000);
+    };
+
+    document.getElementById('timer-reset').onclick = () => { clearInterval(interval); running = false; seconds = 25 * 60; update(); document.getElementById('timer-start').textContent = 'Start'; };
+
+    document.getElementById('open-app').onclick = () => window.electronInjectedApi?.openTaskInLastFocusedAsanaWindow?.('');
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('asana-clone-state'));
+      if (saved?.tasks) {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayTasks = saved.tasks.filter(t => !t.completed && t.dueDate === today).slice(0, 5);
+        const container = document.getElementById('tray-tasks');
+        todayTasks.forEach(t => {
+          const el = document.createElement('div');
+          el.className = 'task-item';
+          el.innerHTML = `<div class="task-check"></div><span class="task-name">${t.name}</span>`;
+          container.appendChild(el);
+        });
+        if (!todayTasks.length) container.innerHTML = '<div style="padding:12px 16px;color:var(--text-dim);font-size:12px;text-align:center">No tasks due today</div>';
+      }
+    } catch {}
+  </script>
+</body>
+</html>

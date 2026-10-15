@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Add Task</title>
+  <style>
+    :root { --bg: #fff; --text: #1e1f21; --dim: #6d6e6f; --border: #e8e8e8; --accent: #4573d2; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #2a2b2d; --text: #f5f4f3; --dim: #a2a0a2; --border: #424244; }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    input, textarea, select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; background: var(--bg); color: var(--text); outline: none; margin-bottom: 12px; }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    textarea { min-height: 60px; resize: vertical; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .btn-cancel { background: none; border: 1px solid var(--border); color: var(--text); }
+    .btn-create { background: var(--accent); color: #fff; }
+    .btn:hover { opacity: .9; }
+  </style>
+</head>
+<body>
+  <h2>Quick Add Task</h2>
+  <input type="text" id="task-name" placeholder="Task name" autofocus>
+  <textarea id="task-desc" placeholder="Description (optional)"></textarea>
+  <div class="row">
+    <input type="date" id="task-due" placeholder="Due date">
+    <select id="task-priority">
+      <option value="">Priority</option>
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+  </div>
+  <div class="actions">
+    <button class="btn btn-cancel" id="cancel">Cancel</button>
+    <button class="btn btn-create" id="create">Create Task</button>
+  </div>
+  <script>
+    document.getElementById('cancel').onclick = () => window.electronInjectedApi?.maybeCloseQuickAddTaskWindow();
+    document.getElementById('create').onclick = () => {
+      const name = document.getElementById('task-name').value.trim();
+      if (!name) return;
+      try {
+        const saved = JSON.parse(localStorage.getItem('asana-clone-state') || '{}');
+        const id = 'qa_' + Date.now();
+        const task = { id, name, description: document.getElementById('task-desc').value, completed: false, assignee: 'u1', dueDate: document.getElementById('task-due').value || null, projectId: null, sectionId: null, priority: document.getElementById('task-priority').value || null, tags: [], subtasks: [], comments: [], likes: 0, liked: false, dependencies: [], attachments: [], createdAt: Date.now(), completedAt: null };
+        saved.tasks = saved.tasks || [];
+        saved.tasks.push(task);
+        saved.nextId = (saved.nextId || 0) + 1;
+        localStorage.setItem('asana-clone-state', JSON.stringify(saved));
+      } catch {}
+      window.electronInjectedApi?.maybeCloseQuickAddTaskWindow();
+    };
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') window.electronInjectedApi?.maybeCloseQuickAddTaskWindow();
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) document.getElementById('create').click();
+    });
+  </script>
+</body>
+</html>
