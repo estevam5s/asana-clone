@@ -81,6 +81,12 @@ contextBridge.exposeInMainWorld('electronInjectedApi', {
   registerNavigationHandler: (cb) => {
     ipcRenderer.on('in-app-navigation', (_, route) => cb(route));
   },
+  registerDeepLinkHandler: (cb) => {
+    ipcRenderer.on('deep-link-navigate', (_, url) => cb(url));
+  },
+  registerCreateFromTemplateHandler: (cb) => {
+    ipcRenderer.on('create-from-template', (_, templateId) => cb(templateId));
+  },
 
   // Auth / Login
   initializeLogin: () => ipcRenderer.invoke('login-initialized'),
@@ -169,4 +175,16 @@ contextBridge.exposeInMainWorld('electronInjectedApi', {
   registerSetIsKeyAsanaWindowHandler: (cb) => {
     ipcRenderer.on('set-is-key-asana-window', () => cb());
   },
+
+  // ── NEW APIs ──
+
+  // File attachment dialog (native file picker)
+  openFileAttachment: () => ipcRenderer.invoke('file-attachment-dialog'),
+
+  // Export/Import project (native save/open dialogs)
+  exportProject: (opts) => ipcRenderer.invoke('export-project-dialog', opts),
+  importProject: () => ipcRenderer.invoke('import-project-dialog'),
+
+  // Load failed retry
+  retryLoadUrl: () => ipcRenderer.invoke('retry-load-url'),
 });

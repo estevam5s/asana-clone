@@ -37,6 +37,7 @@
     </div>
     <div id="topbar-right">
       <button id="btn-create" class="topbar-btn create-btn">+ Create</button>
+      <div class="timer-running-pulse hidden" id="topbar-timer" title="Timer running">&#x23F1;</div>
       <button id="btn-notifications" class="topbar-btn" title="Notifications">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a2 2 0 01-2-2h4a2 2 0 01-2 2zm6-4v-4a6 6 0 00-5-5.9V3a1 1 0 10-2 0v1.1A6 6 0 004 10v4l-2 2v1h16v-1l-2-2z"/></svg>
         <span id="notification-badge" class="badge hidden">0</span>
@@ -67,6 +68,7 @@
           <a class="nav-item" data-view="reporting"><span class="nav-icon">&#x1F4CA;</span> Reporting</a>
           <a class="nav-item" data-view="portfolios"><span class="nav-icon">&#x1F4C1;</span> Portfolios</a>
           <a class="nav-item" data-view="goals"><span class="nav-icon">&#x1F3AF;</span> Goals</a>
+          <a class="nav-item" data-view="workload"><span class="nav-icon">&#x1F4CA;</span> Workload</a>
         </div>
         <div class="nav-section">
           <div class="nav-section-header">
@@ -98,8 +100,10 @@
         </div>
       </div>
       <div id="sidebar-footer">
+        <button id="open-templates" class="sidebar-action">Templates</button>
+        <button id="open-admin" class="sidebar-action" data-view="admin">Admin Console</button>
         <button id="invite-btn" class="sidebar-action">Invite Teammates</button>
-        <button id="help-btn" class="sidebar-action">Help & Getting Started</button>
+        <button id="help-btn" class="sidebar-action">Help &amp; Getting Started</button>
       </div>
     </nav>
 
@@ -232,25 +236,164 @@
             <button id="project-star" class="star-btn" title="Star project">&#x2606;</button>
           </div>
           <div class="view-tabs">
-            <button class="view-tab active" data-tab="list">Overview</button>
-            <button class="view-tab" data-tab="list">List</button>
+            <button class="view-tab" data-tab="overview">Overview</button>
+            <button class="view-tab active" data-tab="list">List</button>
             <button class="view-tab" data-tab="board">Board</button>
             <button class="view-tab" data-tab="timeline">Timeline</button>
             <button class="view-tab" data-tab="calendar">Calendar</button>
             <button class="view-tab" data-tab="workflow">Workflow</button>
             <button class="view-tab" data-tab="dashboard">Dashboard</button>
             <button class="view-tab" data-tab="messages">Messages</button>
+            <button class="view-tab" data-tab="forms">Forms</button>
             <button class="view-tab" data-tab="files">Files</button>
           </div>
           <div class="view-actions">
             <button class="filter-btn">Filter</button>
             <button class="sort-btn">Sort</button>
             <button class="group-btn">Group by</button>
+            <button class="btn-secondary" id="project-custom-fields-btn">Custom Fields</button>
             <button class="share-btn" id="share-project">Share</button>
+            <button class="btn-secondary" id="project-export-btn">Export</button>
           </div>
         </div>
+        <!-- List view (default) -->
         <div class="task-sections" id="project-tasks-sections"></div>
         <button class="add-section-btn" id="add-section-project">+ Add section</button>
+        <!-- Project Overview content -->
+        <div id="project-overview-content" class="overview-grid hidden">
+          <div class="overview-main">
+            <div class="overview-section">
+              <h3>Project description</h3>
+              <div class="overview-description" id="overview-description" contenteditable="true" data-placeholder="What is this project about?"></div>
+            </div>
+            <div class="overview-section">
+              <h3>Key resources</h3>
+              <div class="overview-resources" id="overview-resources"></div>
+              <button class="dep-add-btn" id="add-resource">+ Add resource</button>
+            </div>
+            <div class="overview-section">
+              <h3>Milestones</h3>
+              <div class="overview-milestones" id="overview-milestones"></div>
+            </div>
+          </div>
+          <div class="overview-sidebar">
+            <div class="overview-sidebar-section">
+              <h4>Project status</h4>
+              <div class="overview-chart" id="overview-status-chart"></div>
+            </div>
+            <div class="overview-sidebar-section">
+              <h4>Fields</h4>
+              <div id="overview-fields"></div>
+            </div>
+            <div class="overview-sidebar-section">
+              <h4>Members</h4>
+              <div id="overview-members"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Board view for project -->
+        <div id="project-board-view" class="board-view hidden">
+          <div class="board-columns" id="project-board-columns"></div>
+        </div>
+        <!-- Project Messages content -->
+        <div id="project-messages-content" class="messages-container hidden">
+          <div class="messages-list" id="project-messages-list"></div>
+          <div class="message-composer">
+            <input type="text" id="message-input" placeholder="Send a message to the team...">
+            <button class="btn-primary" id="send-message">Send</button>
+          </div>
+        </div>
+        <!-- Project Dashboard content -->
+        <div id="project-dashboard-content" class="dashboard-grid hidden">
+          <div class="dashboard-card">
+            <div class="dashboard-card-header">Tasks by Status</div>
+            <div class="dashboard-card-body"><canvas id="dashboard-status-chart" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="dashboard-card">
+            <div class="dashboard-card-header">Tasks by Assignee</div>
+            <div class="dashboard-card-body"><canvas id="dashboard-assignee-chart" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="dashboard-card">
+            <div class="dashboard-card-header">Completion Over Time</div>
+            <div class="dashboard-card-body"><canvas id="dashboard-completion-chart" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="dashboard-card">
+            <div class="dashboard-card-header">Upcoming Deadlines</div>
+            <div class="dashboard-card-body" id="dashboard-deadlines"></div>
+          </div>
+        </div>
+        <!-- Project Forms content -->
+        <div id="project-forms-content" class="hidden">
+          <div class="form-builder" id="form-builder-area">
+            <div class="form-fields-list" id="form-fields-list"></div>
+            <div class="form-preview" id="form-preview"></div>
+          </div>
+          <button class="btn-primary" id="create-form-btn" style="margin-top:12px">+ Create Form</button>
+          <div id="form-submissions-area" style="margin-top:24px">
+            <h3>Submissions</h3>
+            <div id="form-submissions-list"></div>
+          </div>
+        </div>
+        <!-- Calendar view for project -->
+        <div id="project-calendar-view" class="calendar-view hidden"></div>
+      </div>
+
+      <!-- Timeline View -->
+      <div id="view-timeline" class="view">
+        <div class="view-header">
+          <h2>Timeline</h2>
+          <div class="timeline-controls">
+            <button class="active" data-zoom="day">Day</button>
+            <button data-zoom="week">Week</button>
+            <button data-zoom="month">Month</button>
+            <div class="timeline-zoom">
+              <button id="zoom-in">+</button>
+              <button id="zoom-out">-</button>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-container" id="timeline-container"></div>
+      </div>
+
+      <!-- Workflow View -->
+      <div id="view-workflow" class="view">
+        <div class="view-header">
+          <h2>Workflow</h2>
+          <button class="btn-primary" id="add-workflow-rule">+ Add Rule</button>
+        </div>
+        <div class="workflow-container">
+          <div class="workflow-stages" id="workflow-stages"></div>
+          <h3 style="margin-top:24px">Rules</h3>
+          <div class="rule-list" id="rule-list"></div>
+          <div class="rule-add-btn" id="rule-add-btn">+ Add a rule</div>
+        </div>
+      </div>
+
+      <!-- Workload View -->
+      <div id="view-workload" class="view">
+        <div class="view-header">
+          <h2>Workload</h2>
+          <div class="view-actions">
+            <button class="filter-btn">Filter by team</button>
+          </div>
+        </div>
+        <div class="workload-container" id="workload-container"></div>
+      </div>
+
+      <!-- Admin Console -->
+      <div id="view-admin" class="view">
+        <div class="admin-layout">
+          <div class="admin-sidebar">
+            <div class="admin-nav active" data-admin="users">Users</div>
+            <div class="admin-nav" data-admin="workspace">Workspace</div>
+            <div class="admin-nav" data-admin="security">Security</div>
+            <div class="admin-nav" data-admin="billing">Billing</div>
+          </div>
+          <div class="admin-content" id="admin-content">
+            <div class="admin-stats" id="admin-stats"></div>
+            <div id="admin-panel-content"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Reporting View -->
@@ -323,6 +466,20 @@
       </div>
       <div id="task-detail-body">
         <h2 id="task-detail-name" contenteditable="true"></h2>
+
+        <!-- Milestone Badge -->
+        <div id="task-milestone-badge" class="milestone-badge hidden">&#x25C6; Milestone</div>
+
+        <!-- Approval Controls -->
+        <div id="task-approval-controls" class="approval-controls hidden">
+          <span id="task-approval-status" class="approval-badge"></span>
+          <button class="approve-btn" id="task-approve">&#x2713; Approve</button>
+          <button class="reject-btn" id="task-reject">&#x2717; Reject</button>
+        </div>
+
+        <!-- Recurrence Badge -->
+        <div id="task-recurrence-badge" class="recurring-badge hidden">&#x21BB; <span id="recurrence-text"></span></div>
+
         <div class="task-fields">
           <div class="task-field">
             <label>Assignee</label>
@@ -331,6 +488,10 @@
           <div class="task-field">
             <label>Due date</label>
             <input type="date" id="task-due-date" class="field-value">
+          </div>
+          <div class="task-field">
+            <label>Start date</label>
+            <input type="date" id="task-start-date" class="field-value">
           </div>
           <div class="task-field">
             <label>Projects</label>
@@ -349,28 +510,85 @@
             <label>Tags</label>
             <div id="task-tags" class="field-value clickable">Add tags</div>
           </div>
-          <div class="task-field">
-            <label>Dependencies</label>
-            <div id="task-dependencies" class="field-value clickable">Add dependencies</div>
+        </div>
+
+        <!-- Custom Fields Section -->
+        <div id="task-custom-fields-section" class="task-detail-section"></div>
+
+        <!-- Dependencies Section -->
+        <div id="task-dependencies-section" class="dependency-section">
+          <div class="field-label">Dependencies</div>
+          <div class="dependency-group">
+            <span class="field-sublabel">Blocked by</span>
+            <div id="task-blocked-by"></div>
+            <button class="dep-add-btn" id="add-blocked-by">+ Add</button>
+          </div>
+          <div class="dependency-group" style="margin-top:6px">
+            <span class="field-sublabel">Blocking</span>
+            <div id="task-blocking"></div>
+            <button class="dep-add-btn" id="add-blocking">+ Add</button>
           </div>
         </div>
+
+        <!-- Time Tracking Section -->
+        <div id="task-time-section" class="timer-inline">
+          <div class="field-label" style="width:100%;margin-bottom:6px">Time Tracking</div>
+          <button class="timer-btn-start" id="task-timer-toggle">Start Timer</button>
+          <span class="timer-display-inline" id="task-timer-display">0:00:00</span>
+          <span class="field-sublabel" id="task-total-time">Total: 0h</span>
+          <button class="btn-secondary" id="task-log-time" style="margin-left:auto">Log Time</button>
+        </div>
+
+        <!-- Attachments Section -->
+        <div id="task-attachments-section">
+          <div class="field-label">Attachments</div>
+          <div id="task-attachments-list"></div>
+          <button class="dep-add-btn" id="task-attach-file">+ Attach file</button>
+          <input type="file" id="file-input-hidden" multiple style="display:none">
+        </div>
+
+        <!-- Description with rich text toolbar -->
         <div id="task-description-section">
+          <div class="rich-toolbar" id="rich-toolbar-desc">
+            <button class="rich-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+            <button class="rich-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+            <button class="rich-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+            <button class="rich-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+            <div class="rich-toolbar-separator"></div>
+            <button class="rich-btn" data-cmd="insertUnorderedList" title="Bullet List">&#x2022;</button>
+            <button class="rich-btn" data-cmd="insertOrderedList" title="Numbered List">1.</button>
+            <div class="rich-toolbar-separator"></div>
+            <button class="rich-btn" data-cmd="formatBlock" data-val="pre" title="Code">&lt;/&gt;</button>
+            <button class="rich-btn" data-cmd="formatBlock" data-val="h3" title="Heading">H</button>
+          </div>
           <div id="task-description" contenteditable="true" data-placeholder="Add a description..."></div>
         </div>
+
+        <!-- Subtasks -->
         <div id="task-subtasks-section">
           <h4>Subtasks</h4>
           <div id="task-subtasks-list"></div>
           <button id="add-subtask-btn" class="inline-add">+ Add subtask</button>
         </div>
+
+        <!-- Activity / Comments with rich text toolbar -->
         <div id="task-comments-section">
           <h4>Activity</h4>
           <div id="task-activity-list"></div>
           <div id="task-comment-input">
+            <div class="rich-toolbar" id="rich-toolbar-comment">
+              <button class="rich-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+              <button class="rich-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+              <button class="rich-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button class="rich-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+              <div class="rich-toolbar-separator"></div>
+              <button class="rich-btn" data-cmd="insertUnorderedList" title="Bullet List">&#x2022;</button>
+              <button class="rich-btn" data-cmd="insertOrderedList" title="Numbered List">1.</button>
+            </div>
             <div id="comment-editor" contenteditable="true" data-placeholder="Write a comment..."></div>
             <div class="comment-toolbar">
-              <button class="comment-tool" title="Formatting">B</button>
               <button class="comment-tool" title="Emoji">&#x1F600;</button>
-              <button class="comment-tool" title="Mention">@</button>
+              <button class="comment-tool" id="comment-mention-btn" title="Mention">@</button>
               <button class="comment-tool" title="Attach">&#x1F4CE;</button>
               <button id="send-comment" class="send-btn">Send</button>
             </div>
@@ -378,6 +596,20 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- ── Mention Dropdown ── -->
+  <div id="mention-dropdown" class="mention-dropdown"></div>
+
+  <!-- ── Batch Operations Toolbar ── -->
+  <div class="batch-toolbar-float hidden" id="batch-toolbar">
+    <span class="batch-count"><span id="batch-count-num">0</span> selected</span>
+    <button id="batch-assign">Assign</button>
+    <button id="batch-date">Set Date</button>
+    <button id="batch-move">Move</button>
+    <button id="batch-complete">Complete</button>
+    <button id="batch-delete">Delete</button>
+    <button id="batch-cancel">&#x2715;</button>
   </div>
 
   <!-- ── Create Task Modal ── -->
@@ -401,6 +633,10 @@
             <input type="date" id="new-task-due">
           </div>
           <div class="modal-field">
+            <label>Start date</label>
+            <input type="date" id="new-task-start">
+          </div>
+          <div class="modal-field">
             <label>Project</label>
             <select id="new-task-project"><option value="">None</option></select>
           </div>
@@ -415,6 +651,14 @@
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Type</label>
+            <select id="new-task-type">
+              <option value="task">Task</option>
+              <option value="milestone">Milestone</option>
+              <option value="approval">Approval</option>
             </select>
           </div>
         </div>
@@ -474,6 +718,12 @@
               <option value="private">Private to members</option>
             </select>
           </div>
+          <div class="modal-field">
+            <label>Template</label>
+            <select id="new-project-template">
+              <option value="">Blank project</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -494,7 +744,17 @@
       <div class="modal-body">
         <div class="share-input-row">
           <input type="text" id="share-email" placeholder="Add members by name or email">
+          <select id="share-role" style="width:120px">
+            <option value="editor">Can edit</option>
+            <option value="commenter">Can comment</option>
+            <option value="viewer">View only</option>
+          </select>
           <button id="share-invite-btn" class="btn-primary">Invite</button>
+        </div>
+        <div class="share-input-row" style="margin-top:8px">
+          <label style="font-size:12px;color:var(--text-tertiary)">
+            <input type="checkbox" id="share-as-guest"> Invite as guest (limited access)
+          </label>
         </div>
         <div id="share-members-list" class="members-list"></div>
         <div class="share-link-row">
@@ -534,12 +794,16 @@
           <div class="shortcut-row"><kbd>Tab+I</kbd><span>Inbox</span></div>
           <div class="shortcut-row"><kbd>/</kbd><span>Search</span></div>
           <div class="shortcut-row"><kbd>Tab+B</kbd><span>Quick add task</span></div>
+          <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>Undo</span></div>
+          <div class="shortcut-row"><kbd>Ctrl+Shift+Z</kbd><span>Redo</span></div>
         </div>
         <div class="shortcut-group">
           <h4>Views</h4>
           <div class="shortcut-row"><kbd>Tab+V</kbd><span>Switch views</span></div>
           <div class="shortcut-row"><kbd>Tab+F</kbd><span>Filter</span></div>
           <div class="shortcut-row"><kbd>Tab+X</kbd><span>Expand sidebar</span></div>
+          <div class="shortcut-row"><kbd>Tab+T</kbd><span>Timeline</span></div>
+          <div class="shortcut-row"><kbd>Tab+W</kbd><span>Workload</span></div>
         </div>
       </div>
     </div>
@@ -726,6 +990,321 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Custom Field Modal ── -->
+  <div id="custom-field-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Custom Field</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="custom-field-form">
+          <div class="modal-field">
+            <label>Field name</label>
+            <input type="text" id="cf-name" placeholder="e.g. Effort, Stage, Cost">
+          </div>
+          <div class="modal-field">
+            <label>Field type</label>
+            <div class="custom-field-type-select" id="cf-type-select">
+              <div class="custom-field-type-option selected" data-type="text">
+                <span class="type-icon">Aa</span> Text
+              </div>
+              <div class="custom-field-type-option" data-type="number">
+                <span class="type-icon">#</span> Number
+              </div>
+              <div class="custom-field-type-option" data-type="dropdown">
+                <span class="type-icon">&#x25BC;</span> Dropdown
+              </div>
+              <div class="custom-field-type-option" data-type="date">
+                <span class="type-icon">&#x1F4C5;</span> Date
+              </div>
+              <div class="custom-field-type-option" data-type="checkbox">
+                <span class="type-icon">&#x2611;</span> Checkbox
+              </div>
+              <div class="custom-field-type-option" data-type="people">
+                <span class="type-icon">&#x1F464;</span> People
+              </div>
+            </div>
+          </div>
+          <div class="modal-field hidden" id="cf-options-field">
+            <label>Options (one per line)</label>
+            <textarea id="cf-options" placeholder="Option 1&#10;Option 2&#10;Option 3" rows="4"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="cf-save">Add Field</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Rule Builder Modal ── -->
+  <div id="rule-builder-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:600px">
+      <div class="modal-header">
+        <h2>Create Rule</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body rule-builder-content">
+        <div class="modal-field">
+          <label>Rule name</label>
+          <input type="text" id="rule-name" placeholder="e.g. Auto-assign on move to In Progress">
+        </div>
+        <div class="rule-builder-section">
+          <h4>When this happens (Trigger)</h4>
+          <div class="rule-trigger-options" id="rule-trigger-options">
+            <div class="rule-option selected" data-trigger="task-moved">
+              <span class="rule-option-icon">&#x27A1;</span>
+              <div class="rule-option-text"><strong>Task moved to section</strong><span>When a task is moved to a specific section</span></div>
+            </div>
+            <div class="rule-option" data-trigger="task-completed">
+              <span class="rule-option-icon">&#x2713;</span>
+              <div class="rule-option-text"><strong>Task completed</strong><span>When a task is marked complete</span></div>
+            </div>
+            <div class="rule-option" data-trigger="task-assigned">
+              <span class="rule-option-icon">&#x1F464;</span>
+              <div class="rule-option-text"><strong>Task assigned</strong><span>When a task is assigned to someone</span></div>
+            </div>
+            <div class="rule-option" data-trigger="due-approaching">
+              <span class="rule-option-icon">&#x23F0;</span>
+              <div class="rule-option-text"><strong>Due date approaching</strong><span>When the due date is within X days</span></div>
+            </div>
+          </div>
+          <div class="modal-field" id="rule-trigger-config" style="margin-top:8px">
+            <label>Section</label>
+            <select id="rule-trigger-section"><option value="">Select section...</option></select>
+          </div>
+        </div>
+        <div class="rule-builder-section">
+          <h4>Do this (Action)</h4>
+          <div class="rule-action-options" id="rule-action-options">
+            <div class="rule-option selected" data-action="move-to-section">
+              <span class="rule-option-icon">&#x27A1;</span>
+              <div class="rule-option-text"><strong>Move to section</strong><span>Move the task to another section</span></div>
+            </div>
+            <div class="rule-option" data-action="assign-to">
+              <span class="rule-option-icon">&#x1F464;</span>
+              <div class="rule-option-text"><strong>Assign to</strong><span>Assign the task to a person</span></div>
+            </div>
+            <div class="rule-option" data-action="add-comment">
+              <span class="rule-option-icon">&#x1F4AC;</span>
+              <div class="rule-option-text"><strong>Add comment</strong><span>Post a comment on the task</span></div>
+            </div>
+            <div class="rule-option" data-action="mark-complete">
+              <span class="rule-option-icon">&#x2705;</span>
+              <div class="rule-option-text"><strong>Mark complete</strong><span>Complete the task automatically</span></div>
+            </div>
+          </div>
+          <div class="modal-field" id="rule-action-config" style="margin-top:8px">
+            <label>Target section</label>
+            <select id="rule-action-section"><option value="">Select section...</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="rule-save">Create Rule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Template Modal ── -->
+  <div id="template-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:700px">
+      <div class="modal-header">
+        <h2>Project Templates</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="template-gallery" id="template-gallery"></div>
+        <div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:16px">
+          <button class="btn-secondary" id="save-as-template">Save current project as template</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Form Builder Modal ── -->
+  <div id="form-builder-modal" class="modal hidden form-builder-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:700px">
+      <div class="modal-header">
+        <h2>Create Form</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label>Form name</label>
+          <input type="text" id="form-name" placeholder="e.g. Bug Report, Feature Request">
+        </div>
+        <div class="form-builder">
+          <div class="form-fields-list" id="modal-form-fields"></div>
+          <div class="form-preview" id="modal-form-preview">
+            <h3>Preview</h3>
+            <div id="form-preview-content"></div>
+          </div>
+        </div>
+        <button class="form-add-field-btn" id="form-add-field">+ Add field</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="form-save">Create Form</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Team Modal ── -->
+  <div id="team-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Manage Team</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label>Team name</label>
+          <input type="text" id="team-name" placeholder="Team name">
+        </div>
+        <h4 style="margin:12px 0 8px">Members</h4>
+        <div id="team-members-list" class="members-list"></div>
+        <div class="share-input-row" style="margin-top:12px">
+          <input type="text" id="team-add-member" placeholder="Add member by name or email">
+          <button class="btn-primary" id="team-add-btn">Add</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="team-save">Save Team</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Workspace Modal ── -->
+  <div id="workspace-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Workspace Settings</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label>Workspace name</label>
+          <input type="text" id="ws-name" value="My Workspace">
+        </div>
+        <div class="modal-field">
+          <label>Icon</label>
+          <input type="text" id="ws-icon" value="A" maxlength="2" style="width:60px;text-align:center;font-size:18px">
+        </div>
+        <h4 style="margin:12px 0 8px">Members</h4>
+        <div id="ws-members-list" class="members-list"></div>
+        <div class="share-input-row" style="margin-top:12px">
+          <input type="text" id="ws-invite-email" placeholder="Invite by email">
+          <button class="btn-primary" id="ws-invite-btn">Invite</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="ws-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Export Modal ── -->
+  <div id="export-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Export Project</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="export-options">
+          <div class="export-option selected" data-format="csv">
+            <div class="export-icon">CSV</div>
+            <div class="export-info">
+              <strong>CSV (Spreadsheet)</strong>
+              <p>Export tasks as comma-separated values for Excel or Google Sheets</p>
+            </div>
+          </div>
+          <div class="export-option" data-format="json">
+            <div class="export-icon">{ }</div>
+            <div class="export-info">
+              <strong>JSON (Data)</strong>
+              <p>Export the full project data structure for developers</p>
+            </div>
+          </div>
+        </div>
+        <div class="export-progress hidden" id="export-progress">
+          <div class="export-progress-bar"><div class="export-progress-bar-fill" id="export-progress-fill"></div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="export-btn">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recurring Task Modal ── -->
+  <div id="recurring-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Set Recurrence</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="recurring-options">
+          <div class="recurring-row">
+            <label>Repeat every</label>
+            <input type="number" id="recur-interval" value="1" min="1" max="365" style="width:60px">
+            <select id="recur-pattern">
+              <option value="daily">Day(s)</option>
+              <option value="weekly">Week(s)</option>
+              <option value="monthly">Month(s)</option>
+              <option value="yearly">Year(s)</option>
+            </select>
+          </div>
+          <div class="recurring-row">
+            <label>End date (optional)</label>
+            <input type="date" id="recur-end">
+          </div>
+          <div class="recurring-summary" id="recur-summary">Repeats every 1 day(s)</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="recur-remove">Remove recurrence</button>
+        <button class="btn-primary" id="recur-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Import Modal ── -->
+  <div id="import-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Import Tasks</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:12px;font-size:13px;color:var(--text-secondary)">Import tasks from a CSV or JSON file. CSV must have a "name" column header.</p>
+        <input type="file" id="import-file-input" accept=".csv,.json">
+        <div id="import-preview" style="margin-top:12px;max-height:200px;overflow-y:auto;font-size:12px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close">Cancel</button>
+        <button class="btn-primary" id="import-btn">Import</button>
       </div>
     </div>
   </div>

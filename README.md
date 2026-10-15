@@ -4,7 +4,7 @@ A complete, functional clone of Asana Desktop, built by reverse-engineering the 
 
 Every subsystem was reconstructed based on REA's analysis of Asana's 398MB evidence file, mapping 16,019 application graph nodes, 99 IPC channels, and the complete `electronInjectedApi` surface.
 
-**7,500+ lines** of hand-written code across 9 source files.
+**8,200+ lines** of hand-written code across 9 source files — **30 feature subsystems** fully implemented.
 
 ## REA Analysis Results
 
@@ -32,7 +32,9 @@ Main Process (Electron)
 ├── Menu System (Asana Clone, Edit, View, Window, Help)
 ├── Global Shortcuts (quick-add task)
 ├── Auto-update System (check, download, restart)
-├── Session Restore
+├── Session Restore (electron-store)
+├── Deep Link Protocol (asana-clone://)
+├── File Attachment/Export/Import dialogs
 ├── Meeting Transcription (stub)
 └── Dock Badge Notifications
 
@@ -58,32 +60,64 @@ Preload (Context Bridge — electronInjectedApi)
 ├── Quick add (1 method)
 ├── Undo/redo (2 methods)
 ├── Search (1 method)
+├── File operations (3 methods — attach, export, import)
+├── Deep link handler (1 method)
 └── Key window (2 methods)
 
-Renderer (Workbench)
+Renderer (Workbench — 30 Feature Subsystems)
 ├── Home Dashboard (tasks, projects, people, private notepad)
 ├── My Tasks (list, board, calendar views)
 ├── Inbox (notifications, filter, archive)
-├── Project View (overview, list, board, timeline, calendar, workflow, dashboard, messages, files)
+├── Project View (overview, list, board, timeline, calendar, workflow, dashboard, messages, forms)
 ├── Reporting (task completion, status breakdown, upcoming deadlines)
 ├── Portfolios (project collections)
 ├── Goals (my goals, team goals, company goals, progress tracking)
 ├── Status Updates (on-track, at-risk, off-track)
-├── Task Detail Panel (slide-in: assignee, due date, priority, tags, dependencies, subtasks, comments/activity)
+├── Timeline / Gantt (Canvas 2D, date ranges, today line, milestones)
+├── Workflow Builder (stage visualization, rule management)
+├── Workload View (team capacity across days)
+├── Admin Console (users, workspace, security, billing panels)
+├── Custom Fields (text, number, dropdown, date, checkbox, people)
+├── Rules / Automation Engine (trigger → action, live execution)
+├── Rich Text Editing (bold, italic, underline, strike, lists, code, headings)
+├── @Mentions (inline user search, keyboard navigation, highlight)
+├── Dependencies (blocked-by / blocking, bidirectional linking)
+├── Milestones (diamond markers, timeline integration)
+├── Approvals (approve/reject workflow, status badges)
+├── Recurring Tasks (daily/weekly/monthly/yearly, auto-create next)
+├── Multi-homing (tasks in multiple projects)
+├── Time Tracking (start/stop timer, manual log, total display)
+├── File Attachments (native dialog + web fallback, file list)
+├── Batch Operations (multi-select, bulk assign/date/move/complete/delete)
+├── Project Templates (4 built-in, save from project, create from template)
+├── Task Templates (save task as template)
+├── Forms Builder (create forms, add fields, submissions)
+├── Messages / Discussions (per-project threaded chat)
+├── Project Overview (description, resources, milestones, donut chart)
+├── Dashboard Charts (Canvas 2D: bar charts, donut charts, deadlines)
+├── Team Management (invite members)
+├── Workspace Settings (rename, icon, invite)
+├── Guest Access (invite external users with limited access)
+├── Export / Import (CSV + JSON export, CSV import)
+├── Undo / Redo (50-level stack, Cmd+Z / Cmd+Shift+Z)
+├── Enhanced Search (fuzzy across tasks, projects, messages)
+├── Deep Link Handler (asana-clone://task/id, asana-clone://project/id)
+├── Session Restore (electron-store persistence)
 ├── Board View (Kanban drag-and-drop)
 ├── Calendar View (month grid with task placement)
-├── Global Search (fuzzy search across tasks and projects)
-├── Create Task Modal (full fields)
-├── Create Project Modal (color picker, privacy, default view)
-├── Share Modal (invite members, copy link)
-├── Settings Modal (profile, account, display, notifications, apps/integrations, hacks)
-├── Keyboard Shortcuts Modal (all shortcuts documented)
-├── Tab Bar (create, close, switch, reorder, context menu)
-├── Sidebar (workspace, nav, projects, teams, starred)
-├── Topbar (search, create, notifications, user avatar)
+├── Global Search (real-time fuzzy search)
+├── Create Task Modal (full fields + milestone/approval type)
+├── Create Project Modal (color picker, privacy, default view, templates)
+├── Share Modal (invite members, guest access, copy link)
+├── Settings Modal (profile, account, display, notifications, apps, hacks)
+├── Keyboard Shortcuts Modal
+├── Tab Bar (create, close, switch)
+├── Sidebar (workspace, nav, projects, teams, starred, templates, admin)
+├── Topbar (search, create, timer indicator, notifications)
 ├── Toast Notifications
 ├── Celebration Animation (confetti on task completion)
 ├── Theme Engine (light, dark, system + custom sidebar/topbar colors)
+├── Context Menus (task actions, more options)
 ├── Workspace Persistence (localStorage)
 ├── Tray Window (focus timer, today's tasks)
 └── Quick Add Window (global shortcut task creation)
@@ -140,63 +174,100 @@ update-desktop-notification-settings                 update-experiments-data
 update-pending              update-tabs
 ```
 
-## Features
+## All 30 Feature Subsystems
 
-### Task Management
-- Create, edit, delete tasks with full detail panel
-- Assignee, due date, priority (low/medium/high), tags, dependencies
-- Subtasks with inline editing and completion
-- Comments and activity feed
-- Like tasks
-- Copy task link
-- Duplicate, delete, convert operations
-- Drag-and-drop between sections
+### 1. Custom Fields
+Create per-project custom fields (text, number, dropdown, date, checkbox, people). Values show on task detail and are persisted per-task.
 
-### Views
-- **List View**: Section-grouped task lists with collapsible headers
-- **Board View**: Kanban columns with drag-and-drop
-- **Calendar View**: Month grid showing tasks by due date
+### 2. Timeline / Gantt View
+Canvas 2D rendered timeline with date headers, task bars with start/end dates, today line, milestone diamonds, drag positioning. Zoom controls.
 
-### Projects
-- Create projects with custom colors (16 colors)
-- Section management (add, rename, reorder)
-- Star/unstar projects
-- Share with members
-- 9 view tabs: Overview, List, Board, Timeline, Calendar, Workflow, Dashboard, Messages, Files
+### 3. Workflow Builder
+Visual stage flow diagram showing project sections as workflow stages with arrows. Integrated rule management panel.
 
-### Reporting
-- Tasks completed chart with percentage
-- Tasks by status breakdown
-- Upcoming deadlines list
+### 4. Rules / Automation Engine
+Event-driven automation: triggers (task-completed, task-created, task-moved, task-assigned) fire actions (move-to-section, assign-to, add-comment, mark-complete). Rules execute live during operations.
 
-### Goals & Portfolios
-- Create and track goals with progress bars
-- Status indicators (on-track, at-risk, off-track)
-- Portfolio collections
+### 5. Rich Text Editing
+`contentEditable` toolbar with bold, italic, underline, strikethrough, bullet/numbered lists, code blocks, and headings. Applied to task descriptions and comments.
 
-### Inbox
-- Notification feed with unread indicators
-- Filter by type (all, unread, mentions, assigned)
-- Archive individual or all
+### 6. @Mentions
+Type `@` in any contentEditable area to search users. Keyboard arrow navigation, Enter to insert. Mentions render as highlighted inline spans.
 
-### Settings
-- **Profile**: Photo, name, email, job title, department, about
-- **Account**: Language, 2FA, deactivate
-- **Display**: Theme (light/dark/system), sidebar/topbar colors, compact mode, row numbers, colorblind mode
-- **Notifications**: Desktop notifications, email frequency, DND
-- **Apps**: Google Drive, Teams, Slack, GitHub, Jira, Figma integrations
-- **Hacks**: Extra delight, disable celebrations
+### 7. Dependencies
+Bidirectional "blocked by" / "blocking" links between tasks. Add/remove from task detail. Dependency tags with one-click removal.
 
-### Desktop Features (Electron)
-- Tab bar with create, close, switch, reorder, context menu
-- Tray app with focus timer (25-min Pomodoro) and today's tasks
-- Quick-add task window (global shortcut)
-- macOS traffic light window controls
-- Dock badge notifications
-- Full screen support
-- Global keyboard shortcuts
+### 8. Milestones
+Mark any task as a milestone (diamond icon). Displayed in timeline as diamond markers, in task rows with a milestone badge.
 
-### Keyboard Shortcuts
+### 9. Approvals
+Mark tasks as approvals with approve/reject buttons. Status badges (pending/approved/rejected). Approval completes the task.
+
+### 10. Recurring Tasks
+Set daily/weekly/monthly/yearly recurrence with custom intervals. When completed, automatically creates the next occurrence with shifted dates.
+
+### 11. Multi-homing
+Tasks can belong to multiple projects simultaneously. Project tags displayed on task rows. Manage from task detail panel.
+
+### 12. Time Tracking
+Start/stop timer per task with live display in task detail and topbar indicator. Manual time logging. Total tracked time display.
+
+### 13. File Attachments
+Attach files via native Electron dialog (with web fallback). File list with type icons, sizes, and remove button.
+
+### 14. Batch Operations
+Checkbox multi-select across tasks. Floating toolbar for bulk assign, set date, move, complete, or delete.
+
+### 15. Project Templates
+4 built-in templates (Product Launch, Sprint Planning, Marketing Campaign, Event Planning). Save any project as template. Create from template gallery.
+
+### 16. Task Templates
+Save any task configuration as a reusable template from the More Actions menu.
+
+### 17. Forms Builder
+Create intake forms per project with custom fields. Add/remove form fields. Submissions list.
+
+### 18. Messages / Discussions
+Per-project message thread. Compose and send messages. User avatars, timestamps. Real-time rendering.
+
+### 19. Project Overview
+Project description (editable), key resources, milestones list, donut completion chart, project details sidebar.
+
+### 20. Dashboard Charts
+Canvas 2D charts per project: tasks by section (bar), completion rate (donut), tasks by assignee (bar), upcoming deadlines list.
+
+### 21. Workload View
+Team capacity visualization: users × days grid with task count bars. Over-capacity highlighting.
+
+### 22. Admin Console
+4 panels: Users (list + guests), Workspace settings, Security, Billing. Stats cards (users, tasks, projects, completed).
+
+### 23. Team Management
+Invite members by email. Team member list display.
+
+### 24. Workspace Settings
+Rename workspace, change icon, invite members. Persisted across sessions.
+
+### 25. Guest Access
+Invite external users as guests with limited access level. Listed in Admin Console.
+
+### 26. Export / Import
+Export tasks as CSV or JSON. Import from CSV files. Format selection modal with progress indicator.
+
+### 27. Undo / Redo
+50-level undo/redo stack. Tracks task create, delete, and update operations. Cmd+Z / Cmd+Shift+Z keyboard shortcuts.
+
+### 28. Enhanced Search
+Real-time fuzzy search across tasks, projects, and messages. Categorized results dropdown with click-to-navigate.
+
+### 29. Deep Link Handler
+`asana-clone://task/{id}` and `asana-clone://project/{id}` protocol handling via Electron.
+
+### 30. Session Restore
+Electron-store based session persistence with restore banner on relaunch.
+
+## Keyboard Shortcuts
+
 | Shortcut | Action |
 |---|---|
 | Tab+N | New task |
@@ -204,8 +275,11 @@ update-pending              update-tabs
 | Tab+Z | My Tasks |
 | Tab+I | Inbox |
 | Tab+X | Toggle sidebar |
+| Tab+E | Export |
 | / | Search |
 | Cmd+F | Search |
+| Cmd+Z | Undo |
+| Cmd+Shift+Z | Redo |
 | Escape | Close modal/panel |
 
 ## Quick Start
@@ -227,7 +301,9 @@ npm run build:linux  # Linux AppImage
 
 - **Electron 33** — multi-process desktop application
 - **Pure HTML/CSS/JS** — no framework, matching Asana's Electron approach
+- **Canvas 2D** — timeline, gantt, dashboard charts
 - **localStorage** — workspace persistence
+- **electron-store** — session restore
 - **REA** — reverse engineering analysis that guided this build
 
 ## How It Was Built
@@ -238,7 +314,7 @@ npm run build:linux  # Linux AppImage
 4. Ran `rea analyze-javascript-application` on the ASAR with `--integrity-policy record-and-continue`
 5. Produced 398MB of evidence: 16,019 graph nodes, 99 IPC channels, complete Electron boundaries
 6. Mapped every IPC channel, context bridge API, and renderer interaction
-7. Reconstructed all subsystems based on the evidence
+7. Reconstructed all 30 subsystems based on the evidence
 
 ## License
 

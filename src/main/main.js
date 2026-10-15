@@ -1,10 +1,16 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeTheme, dialog, shell, screen, globalShortcut, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+
+let Store;
+try { Store = require('electron-store'); } catch { Store = null; }
+const store = Store ? new Store({ name: 'asana-clone-session' }) : null;
 
 let mainWindow = null;
 let trayWindow = null;
 let quickAddWindow = null;
+let aboutWindow = null;
 let tray = null;
 let isFullScreen = false;
 let currentUser = null;
@@ -22,11 +28,47 @@ let upcomingMeetings = [];
 let activeRecording = null;
 let quickAddTaskId = null;
 let keyAsanaWindowId = null;
+let lastSessionCrashed = false;
+
+// ── Deep link protocol ──
+app.setAsDefaultProtocolClient('asana-clone');
+
+// ── Session restore helpers ──
+function saveWindowState() {
+  if (!store || !mainWindow) return;
+  try {
+    const bounds = mainWindow.getBounds();
+    store.set('windowState', {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: mainWindow.isMaximized(),
+      isFullScreen: mainWindow.isFullScreen(),
+    });
+    store.set('cleanExit', true);
+  } catch {}
+}
+
+function loadWindowState() {
+  if (!store) return null;
+  try {
+    const wasClean = store.get('cleanExit', true);
+    if (!wasClean) lastSessionCrashed = true;
+    store.set('cleanExit', false);
+    return store.get('windowState', null);
+  } catch { return null; }
+}
+
+// ── Window creation ──
 
 function createMainWindow() {
+  const saved = loadWindowState();
+  const defaults = { width: 1400, height: 900, x: undefined, y: undefined };
+  const opts = saved ? { width: saved.width, height: saved.height, x: saved.x, y: saved.y } : defaults;
+
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    ...opts,
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
@@ -42,12 +84,22 @@ function createMainWindow() {
     show: false
   });
 
+  if (saved?.isMaximized) mainWindow.maximize();
+  if (saved?.isFullScreen) mainWindow.setFullScreen(true);
+
   const defaultTab = { id: uuidv4(), title: 'Home', url: 'asana://home', active: true };
   tabs = [defaultTab];
   activeTabId = defaultTab.id;
   keyAsanaWindowId = mainWindow.id;
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    if (errorCode !== -3) {
+      mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'load-failed.html'));
+    }
+  });
+
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
   mainWindow.on('enter-full-screen', () => {
@@ -60,6 +112,10 @@ function createMainWindow() {
   });
   mainWindow.on('maximize', () => mainWindow.webContents.send('maximize-window'));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('unmaximize-window'));
+
+  mainWindow.on('resize', () => saveWindowState());
+  mainWindow.on('move', () => saveWindowState());
+
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -97,6 +153,28 @@ function createQuickAddWindow() {
   quickAddWindow.loadFile(path.join(__dirname, '..', 'renderer', 'quickadd.html'));
 }
 
+function createAboutWindow() {
+  if (aboutWindow) { aboutWindow.focus(); return; }
+  aboutWindow = new BrowserWindow({
+    width: 360,
+    height: 280,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    frame: true,
+    title: 'About Asana Clone',
+    webPreferences: { contextIsolation: true, nodeIntegration: false }
+  });
+  aboutWindow.setMenu(null);
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#1e1f21;color:#f5f4f3;text-align:center}
+.icon{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#4573d2,#7a6ff0);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;margin-bottom:12px}
+h1{font-size:18px;margin:0 0 4px}p{font-size:12px;color:#a2a0a2;margin:2px 0}</style></head>
+<body><div class="icon">A</div><h1>Asana Clone</h1><p>Version 1.0.0</p><p>Reverse-engineered from Asana Desktop v2.10.2</p><p>Built with REA &middot; Electron 33</p></body></html>`;
+  aboutWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  aboutWindow.on('closed', () => { aboutWindow = null; });
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, '..', '..', 'static', 'tray-icon.png');
   try {
@@ -120,12 +198,14 @@ function createTray() {
   });
 }
 
+// ── Menu ──
+
 function buildAppMenu() {
   const template = [
     {
       label: 'Asana Clone',
       submenu: [
-        { label: 'About Asana Clone', role: 'about' },
+        { label: 'About Asana Clone', click: () => createAboutWindow() },
         { type: 'separator' },
         { label: 'Preferences...', accelerator: 'CmdOrCtrl+,', click: () => mainWindow?.webContents.send('menu-bar-preferences-click') },
         { type: 'separator' },
@@ -134,6 +214,32 @@ function buildAppMenu() {
         { role: 'unhide' },
         { type: 'separator' },
         { role: 'quit' }
+      ]
+    },
+    {
+      label: 'File',
+      submenu: [
+        { label: 'New Task', accelerator: 'CmdOrCtrl+N', click: () => mainWindow?.webContents.send('in-app-navigation', '/new-task') },
+        { label: 'New Project', accelerator: 'CmdOrCtrl+Shift+N', click: () => mainWindow?.webContents.send('in-app-navigation', '/new-project') },
+        { type: 'separator' },
+        {
+          label: 'Templates',
+          submenu: [
+            { label: 'Blank Project', click: () => mainWindow?.webContents.send('create-from-template', 'blank') },
+            { label: 'Board Project', click: () => mainWindow?.webContents.send('create-from-template', 'board') },
+            { label: 'Sprint Planning', click: () => mainWindow?.webContents.send('create-from-template', 'sprint') },
+            { label: 'Product Launch', click: () => mainWindow?.webContents.send('create-from-template', 'product-launch') },
+            { label: 'Marketing Campaign', click: () => mainWindow?.webContents.send('create-from-template', 'marketing') },
+            { label: 'Event Planning', click: () => mainWindow?.webContents.send('create-from-template', 'event') },
+            { label: 'Bug Tracking', click: () => mainWindow?.webContents.send('create-from-template', 'bugs') },
+            { label: 'Onboarding', click: () => mainWindow?.webContents.send('create-from-template', 'onboarding') },
+          ]
+        },
+        { type: 'separator' },
+        { label: 'Export Project...', accelerator: 'CmdOrCtrl+Shift+E', click: () => mainWindow?.webContents.send('in-app-navigation', '/export') },
+        { label: 'Import Project...', accelerator: 'CmdOrCtrl+Shift+I', click: () => mainWindow?.webContents.send('in-app-navigation', '/import') },
+        { type: 'separator' },
+        { label: 'Print...', accelerator: 'CmdOrCtrl+P', click: () => mainWindow?.webContents.print() },
       ]
     },
     {
@@ -186,6 +292,8 @@ function buildAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// ── Tab management ──
+
 function createNewTab(url) {
   const tab = { id: uuidv4(), title: 'New Tab', url: url || 'asana://home', active: true };
   tabs.forEach(t => t.active = false);
@@ -229,7 +337,9 @@ function broadcastTabs() {
   });
 }
 
-// ── IPC Handlers: 99 channels matching Asana's Electron IPC surface ──
+// ══════════════════════════════════════════════════════════════
+// IPC Handlers — all 99 original channels + new channels
+// ══════════════════════════════════════════════════════════════
 
 // Window management
 ipcMain.handle('get-is-full-screen', () => isFullScreen);
@@ -299,9 +409,9 @@ ipcMain.handle('download-update-and-restart', () => {
 ipcMain.handle('restart-for-update', () => { app.relaunch(); app.exit(); });
 
 // Session restore
-ipcMain.handle('should-show-session-restore-banner', () => false);
-ipcMain.handle('respond-to-session-restore', (_, accept) => { /* no-op in clone */ });
-ipcMain.handle('discard-pending-session-restore', () => { /* no-op */ });
+ipcMain.handle('should-show-session-restore-banner', () => lastSessionCrashed);
+ipcMain.handle('respond-to-session-restore', (_, accept) => { lastSessionCrashed = false; });
+ipcMain.handle('discard-pending-session-restore', () => { lastSessionCrashed = false; });
 
 // Settings
 ipcMain.handle('get-desktop-settings', () => desktopSettings);
@@ -377,7 +487,7 @@ ipcMain.handle('open-notification-settings', () => {
 });
 
 // Auth / Login
-ipcMain.handle('login-initialized', () => { /* no-op */ });
+ipcMain.handle('login-initialized', () => {});
 ipcMain.handle('initiate-browser-login-flow', () => {
   mainWindow?.webContents.send('in-app-navigation', '/login');
 });
@@ -387,7 +497,7 @@ ipcMain.handle('initiate-oauth-flow', (_, provider) => {
 ipcMain.handle('initiate-integration-oauth-flow', (_, config) => {
   mainWindow?.webContents.send('in-app-navigation', '/integrations');
 });
-ipcMain.handle('desktop-start-session', () => { /* no-op */ });
+ipcMain.handle('desktop-start-session', () => {});
 
 // Meeting transcription
 ipcMain.handle('is-meeting-transcription-enabled', () => false);
@@ -501,7 +611,67 @@ ipcMain.handle('set-recording-widget-tooltip-expanded', () => {});
 
 // Retry load URL
 ipcMain.handle('retry-load-url', () => {
-  mainWindow?.webContents.reload();
+  mainWindow?.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+});
+
+// ══════════════════════════════════════════════════════════════
+// NEW IPC channels
+// ══════════════════════════════════════════════════════════════
+
+// File attachment dialog
+ipcMain.handle('file-attachment-dialog', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'All Files', extensions: ['*'] },
+      { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'] },
+      { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'csv'] },
+    ]
+  });
+  if (result.canceled) return [];
+  return result.filePaths.map(fp => {
+    try {
+      const stat = fs.statSync(fp);
+      return { name: path.basename(fp), path: fp, size: stat.size };
+    } catch {
+      return { name: path.basename(fp), path: fp, size: 0 };
+    }
+  });
+});
+
+// Export project dialog
+ipcMain.handle('export-project-dialog', async (_, { format, data }) => {
+  const ext = format === 'json' ? 'json' : 'csv';
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: `project-export.${ext}`,
+    filters: [{ name: format === 'json' ? 'JSON' : 'CSV', extensions: [ext] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  try {
+    fs.writeFileSync(result.filePath, data, 'utf-8');
+    return { success: true, filePath: result.filePath };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Import project dialog
+ipcMain.handle('import-project-dialog', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Project Files', extensions: ['json', 'csv'] },
+    ]
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  try {
+    const filePath = result.filePaths[0];
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const ext = path.extname(filePath).slice(1);
+    return { content, format: ext, fileName: path.basename(filePath) };
+  } catch (err) {
+    return { error: err.message };
+  }
 });
 
 // ── Global shortcuts ──
@@ -515,6 +685,34 @@ function registerGlobalShortcuts() {
       quickAddWindow.focus();
     });
   }
+}
+
+// ── Deep link handling ──
+
+function handleDeepLink(url) {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send('deep-link-navigate', url);
+}
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
+
+const gotSingleLock = app.requestSingleInstanceLock();
+if (!gotSingleLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_, argv) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    const deepLink = argv.find(a => a.startsWith('asana-clone://'));
+    if (deepLink) handleDeepLink(deepLink);
+  });
 }
 
 // ── App lifecycle ──
@@ -536,6 +734,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  saveWindowState();
+  if (store) store.set('cleanExit', true);
   globalShortcut.unregisterAll();
   tray?.destroy();
 });
