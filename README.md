@@ -4,7 +4,7 @@ A complete, functional clone of Asana Desktop, built by reverse-engineering the 
 
 Every subsystem was reconstructed based on REA's analysis of Asana's 398MB evidence file, mapping 16,019 application graph nodes, 99 IPC channels, and the complete `electronInjectedApi` surface.
 
-**8,200+ lines** of hand-written code across 9 source files — **30 feature subsystems** fully implemented.
+**8,500+ lines** of hand-written code across 10 source files — **30 feature subsystems** fully implemented.
 
 ## REA Analysis Results
 
